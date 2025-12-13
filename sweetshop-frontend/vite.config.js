@@ -1,10 +1,7 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react";
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
 
 export default defineConfig({
+  base: '/sweet-shop-management-system/',
   plugins: [react()],
-  server: {
-    host: true,   // 👈 THIS exposes to LAN
-    port: 5173,
-  },
-});
+})
