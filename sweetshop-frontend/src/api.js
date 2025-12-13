@@ -1,9 +1,8 @@
 import axios from "axios";
 
 const API = axios.create({
-  baseURL: "http://192.168.1.5:8000", // your laptop IP
+  baseURL: "https://sweet-shop-management-system-is0y.onrender.com",
 });
-
 // attach token automatically
 API.interceptors.request.use((req) => {
   const token = localStorage.getItem("token");
