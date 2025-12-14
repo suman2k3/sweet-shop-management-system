@@ -1,11 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
+from datetime import datetime, timedelta, timezone
+from jose import jwt
+import hashlib
+
 from database import SessionLocal
 from models import User
-import hashlib
-from jose import jwt
-from datetime import datetime, timedelta, timezone
 
 router = APIRouter()
 
@@ -14,7 +15,7 @@ ALGORITHM = "HS256"
 
 security = HTTPBearer()
 
-# ---------------- DB ----------------
+# ---------------- DB Dependency ----------------
 def get_db():
     db = SessionLocal()
     try:
@@ -22,13 +23,14 @@ def get_db():
     finally:
         db.close()
 
-# ---------------- AUTH UTILS ----------------
+# ---------------- Password Utils ----------------
 def hash_password(password: str):
     return hashlib.sha256(password.encode()).hexdigest()
 
 def verify_password(password: str, hashed: str):
     return hash_password(password) == hashed
 
+# ---------------- JWT ----------------
 def create_token(user: User):
     payload = {
         "sub": user.username,
@@ -37,7 +39,7 @@ def create_token(user: User):
     }
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
-# ---------------- ROUTES ----------------
+# ---------------- Auth Routes ----------------
 @router.post("/register")
 def register(username: str, password: str, db: Session = Depends(get_db)):
     if db.query(User).filter(User.username == username).first():
@@ -45,22 +47,23 @@ def register(username: str, password: str, db: Session = Depends(get_db)):
 
     user = User(
         username=username,
-        hashed_password=hash_password(password),
-        is_admin=False        # 🔒 users are NOT admin by default
+        hashed_password=hash_password(password)
     )
     db.add(user)
     db.commit()
-    return {"message": "Registered successfully"}
+    return {"message": "User registered successfully"}
 
 @router.post("/login")
 def login(username: str, password: str, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == username).first()
+
     if not user or not verify_password(password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    return {"access_token": create_token(user)}
+    token = create_token(user)
+    return {"access_token": token}
 
-# ---------------- CURRENT USER ----------------
+# ---------------- Current User ----------------
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Security(security),
     db: Session = Depends(get_db)
@@ -77,19 +80,16 @@ def get_current_user(
 
     return user
 
+# ---------------- Admin Guard ----------------
+def admin_required(current_user: User = Depends(get_current_user)):
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return current_user
+
+# ---------------- /me ----------------
 @router.get("/me")
-def me(current_user: User = Depends(get_current_user)):
+def get_me(current_user: User = Depends(get_current_user)):
     return {
         "username": current_user.username,
         "is_admin": current_user.is_admin
     }
-
-@router.post("/make-admin")
-def make_admin(username: str, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.username == username).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-
-    user.is_admin = True
-    db.commit()
-    return {"message": f"{username} is now admin"}
