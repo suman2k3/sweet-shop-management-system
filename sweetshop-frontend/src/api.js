@@ -2,8 +2,8 @@ import axios from "axios";
 
 const API = axios.create({
   // change this depending on environment
-  baseURL: "http://127.0.0.1:8000", // local backend
-  // baseURL: "https://sweet-shop-management-system-is0y.onrender.com", // production
+  
+   baseURL: "https://sweet-shop-management-system-is0y.onrender.com",
 });
 
 // attach token automatically
