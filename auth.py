@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, timezone
 from jose import jwt
 import hashlib
+from pydantic import BaseModel
 
 from database import SessionLocal
 from models import User
@@ -39,29 +40,40 @@ def create_token(user: User):
     }
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
+# =======================
+# REQUEST SCHEMAS
+# =======================
+class RegisterRequest(BaseModel):
+    username: str
+    password: str
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
 # ---------------- Auth Routes ----------------
 @router.post("/register")
-def register(username: str, password: str, db: Session = Depends(get_db)):
-    if db.query(User).filter(User.username == username).first():
+def register(data: RegisterRequest, db: Session = Depends(get_db)):
+    if db.query(User).filter(User.username == data.username).first():
         raise HTTPException(status_code=400, detail="User already exists")
 
     user = User(
-        username=username,
-        hashed_password=hash_password(password)
+        username=data.username,
+        hashed_password=hash_password(data.password)
     )
     db.add(user)
     db.commit()
     return {"message": "User registered successfully"}
 
 @router.post("/login")
-def login(username: str, password: str, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.username == username).first()
+def login(data: LoginRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.username == data.username).first()
 
-    if not user or not verify_password(password, user.hashed_password):
+    if not user or not verify_password(data.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     token = create_token(user)
-    return {"access_token": token}
+    return {"access_token": token, "token_type": "bearer"}
 
 # ---------------- Current User ----------------
 def get_current_user(
