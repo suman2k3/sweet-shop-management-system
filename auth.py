@@ -1,22 +1,20 @@
 from fastapi import APIRouter, Depends, HTTPException, Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
-from jose import jwt
-from datetime import datetime, timedelta, timezone
-import hashlib
-
 from database import SessionLocal
 from models import User
+import hashlib
+from jose import jwt
+from datetime import datetime, timedelta, timezone
 
 router = APIRouter()
 
-SECRET_KEY = "secret123"  # move to env in real prod
+SECRET_KEY = "secret123"
 ALGORITHM = "HS256"
 
 security = HTTPBearer()
 
-# -------------------- DATABASE DEP --------------------
+# ---------------- DB ----------------
 def get_db():
     db = SessionLocal()
     try:
@@ -24,7 +22,7 @@ def get_db():
     finally:
         db.close()
 
-# -------------------- UTILS --------------------
+# ---------------- AUTH UTILS ----------------
 def hash_password(password: str):
     return hashlib.sha256(password.encode()).hexdigest()
 
@@ -39,48 +37,36 @@ def create_token(user: User):
     }
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
-# -------------------- REQUEST SCHEMAS --------------------
-class AuthRequest(BaseModel):
-    username: str
-    password: str
-
-# -------------------- AUTH ROUTES --------------------
+# ---------------- ROUTES ----------------
 @router.post("/register")
-def register(data: AuthRequest, db: Session = Depends(get_db)):
-    existing_user = db.query(User).filter(User.username == data.username).first()
-    if existing_user:
+def register(username: str, password: str, db: Session = Depends(get_db)):
+    if db.query(User).filter(User.username == username).first():
         raise HTTPException(status_code=400, detail="User already exists")
 
-    new_user = User(
-        username=data.username,
-        hashed_password=hash_password(data.password),
-        is_admin=False
+    user = User(
+        username=username,
+        hashed_password=hash_password(password),
+        is_admin=False        # 🔒 users are NOT admin by default
     )
-
-    db.add(new_user)
+    db.add(user)
     db.commit()
-
-    return {"message": "User registered successfully"}
+    return {"message": "Registered successfully"}
 
 @router.post("/login")
-def login(data: AuthRequest, db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.username == data.username).first()
-
-    if not user or not verify_password(data.password, user.hashed_password):
+def login(username: str, password: str, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.username == username).first()
+    if not user or not verify_password(password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    token = create_token(user)
-    return {"access_token": token}
+    return {"access_token": create_token(user)}
 
-# -------------------- AUTH GUARDS --------------------
+# ---------------- CURRENT USER ----------------
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Security(security),
     db: Session = Depends(get_db)
 ):
-    token = credentials.credentials
-
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(credentials.credentials, SECRET_KEY, algorithms=[ALGORITHM])
         username = payload.get("sub")
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid token")
@@ -91,12 +77,13 @@ def get_current_user(
 
     return user
 
-def admin_required(current_user: User = Depends(get_current_user)):
-    if not current_user.is_admin:
-        raise HTTPException(status_code=403, detail="Admin access required")
-    return current_user
+@router.get("/me")
+def me(current_user: User = Depends(get_current_user)):
+    return {
+        "username": current_user.username,
+        "is_admin": current_user.is_admin
+    }
 
-# -------------------- ADMIN --------------------
 @router.post("/make-admin")
 def make_admin(username: str, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == username).first()
@@ -106,11 +93,3 @@ def make_admin(username: str, db: Session = Depends(get_db)):
     user.is_admin = True
     db.commit()
     return {"message": f"{username} is now admin"}
-
-# -------------------- CURRENT USER --------------------
-@router.get("/me")
-def get_me(current_user: User = Depends(get_current_user)):
-    return {
-        "username": current_user.username,
-        "is_admin": current_user.is_admin
-    }
