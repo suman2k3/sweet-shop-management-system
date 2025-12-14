@@ -9,21 +9,26 @@ function Login({ onLogin }) {
   const handleSubmit = async () => {
     try {
       if (isRegister) {
-        // REGISTER
-        await API.post(
-          `/register?username=${username}&password=${password}`
-        );
+        // REGISTER (JSON BODY)
+        await API.post("/register", {
+          username,
+          password,
+        });
+
         alert("Registered successfully. Please login.");
         setIsRegister(false);
       } else {
-        // LOGIN
-        const res = await API.post(
-          `/login?username=${username}&password=${password}`
-        );
+        // LOGIN (JSON BODY)
+        const res = await API.post("/login", {
+          username,
+          password,
+        });
+
         localStorage.setItem("token", res.data.access_token);
         onLogin();
       }
     } catch (err) {
+      console.error(err);
       alert(isRegister ? "Registration failed" : "Login failed");
     }
   };
