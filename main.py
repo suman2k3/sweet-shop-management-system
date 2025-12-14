@@ -11,7 +11,8 @@ models.Base.metadata.create_all(bind=engine)
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173","http://192.168.1.5:5173"],  # frontend URL
+    allow_origins=["http://localhost:5173","http://192.168.1.5:5173","https://sweetshop-management.netlify.app"],
+        # frontend URL
    
 
     allow_credentials=True,
