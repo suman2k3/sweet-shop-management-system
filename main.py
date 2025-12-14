@@ -27,3 +27,5 @@ app.include_router(sweets_router)
 @app.get("/")
 def home():
     return {"message": "Sweet Shop API running"}
+from fastapi import Depends
+from models import User

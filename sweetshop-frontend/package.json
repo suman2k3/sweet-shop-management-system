@@ -1,26 +1,18 @@
-
-
 {
-  
-  "name": "sweetshop-frontend",
-  "private": true,
-  "version": "0.0.0",
-  "homepage": "https://suman2k3.github.io/sweet-shop-management-system",
-
   "name": "sweetshop-frontend",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-  "dev": "vite",
-  "build": "vite build",
-  "preview": "vite preview",
-  "predeploy": "npm run build",
-  "deploy": "gh-pages -d dist"
-}
-,
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist"
+  },
   "dependencies": {
     "axios": "^1.13.2",
+    "jwt-decode": "^4.0.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },

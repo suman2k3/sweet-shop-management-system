@@ -4,7 +4,8 @@ from database import SessionLocal
 from models import User
 import hashlib
 from jose import jwt
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from fastapi import APIRouter
 
 router = APIRouter()
 
@@ -26,11 +27,16 @@ def hash_password(password: str):
 def verify_password(password: str, hashed: str):
     return hash_password(password) == hashed
 
-def create_token(username: str):
+def create_token(user: User):
     payload = {
-        "sub": username,
-        "exp": datetime.utcnow() + timedelta(hours=1)
+        "sub": user.username,
+        "is_admin": user.is_admin,
+        "exp": datetime.now(timezone.utc) + timedelta(hours=1)
     }
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
+
+
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 
@@ -56,7 +62,8 @@ def login(username: str, password: str, db: Session = Depends(get_db)):
     if not user or not verify_password(password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    token = create_token(user.username)
+    token = create_token(user)
+
     return {"access_token": token}
 from fastapi import Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -96,3 +103,21 @@ def make_admin(username: str, db: Session = Depends(get_db)):
     user.is_admin = True
     db.commit()
     return {"message": f"{username} is now admin"}
+from fastapi import Depends
+
+@router.get("/me")
+def get_me(current_user: User = Depends(get_current_user)):
+    return {
+        "username": current_user.username,
+        "is_admin": current_user.is_admin
+    }
+from fastapi import Depends
+from models import User
+
+@router.get("/me")
+def get_me(current_user: User = Depends(get_current_user)):
+    return {
+        "username": current_user.username,
+        "is_admin": current_user.is_admin
+    }
+

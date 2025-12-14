@@ -8,8 +8,9 @@ class Sweet(Base):
     name = Column(String, nullable=False)
     category = Column(String, nullable=False)
     price = Column(Float, nullable=False)
-    quantity = Column(Integer, nullable=False)
-
+    quantity = Column(String, nullable=False)   # "500 g"
+    stock = Column(Integer, nullable=False) 
+    image = Column(String, nullable=True)
 
 class User(Base):
     __tablename__ = "users"

@@ -1,11 +1,9 @@
-from auth import admin_required
-
+from auth import admin_required, get_current_user
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from database import SessionLocal
 from models import Sweet, User
-from auth import get_current_user
 
 router = APIRouter()
 
@@ -24,7 +22,9 @@ def add_sweet(
     name: str,
     category: str,
     price: float,
-    quantity: int,
+    quantity: str,      # display quantity (e.g. "500 g")
+    stock: int,  
+    image: str = None,       # numeric stock (e.g. 500)
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -32,7 +32,9 @@ def add_sweet(
         name=name,
         category=category,
         price=price,
-        quantity=quantity
+        quantity=quantity,
+        stock=stock,
+        image=image
     )
     db.add(sweet)
     db.commit()
@@ -56,7 +58,9 @@ def update_sweet(
     name: str,
     category: str,
     price: float,
-    quantity: int,
+    quantity: str,
+    stock: int,
+    image: str = None, 
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -69,13 +73,15 @@ def update_sweet(
     sweet.category = category
     sweet.price = price
     sweet.quantity = quantity
+    sweet.stock = stock
+    sweet.image = image 
 
     db.commit()
     db.refresh(sweet)
     return sweet
 
 
-# -------------------- DELETE SWEET (PROTECTED) --------------------
+# -------------------- DELETE SWEET (ADMIN ONLY) --------------------
 @router.delete("/sweets/{sweet_id}")
 def delete_sweet(
     sweet_id: int,
@@ -92,12 +98,11 @@ def delete_sweet(
     return {"message": "Sweet deleted by admin"}
 
 
-
 # -------------------- PURCHASE SWEET (PROTECTED) --------------------
 @router.post("/sweets/{sweet_id}/purchase")
 def purchase_sweet(
     sweet_id: int,
-    quantity: int,
+    quantity: int,      # how much user buys
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -106,10 +111,10 @@ def purchase_sweet(
     if not sweet:
         raise HTTPException(status_code=404, detail="Sweet not found")
 
-    if sweet.quantity < quantity:
+    if sweet.stock < quantity:
         raise HTTPException(status_code=400, detail="Not enough stock available")
 
-    sweet.quantity -= quantity
+    sweet.stock -= quantity
     db.commit()
     db.refresh(sweet)
 
@@ -117,10 +122,13 @@ def purchase_sweet(
         "message": "Purchase successful",
         "remaining_quantity": sweet.quantity
     }
+
+
+# -------------------- RESTOCK SWEET (ADMIN ONLY) --------------------
 @router.post("/sweets/{sweet_id}/restock")
 def restock_sweet(
     sweet_id: int,
-    quantity: int,
+    quantity: int,      # how much admin adds
     db: Session = Depends(get_db),
     admin: User = Depends(admin_required)
 ):
@@ -129,7 +137,7 @@ def restock_sweet(
     if not sweet:
         raise HTTPException(status_code=404, detail="Sweet not found")
 
-    sweet.quantity += quantity
+    sweet.stock += quantity
     db.commit()
     db.refresh(sweet)
 
