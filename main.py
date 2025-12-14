@@ -13,7 +13,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173",
                    "http://192.168.1.5:5173",
-                   "https://sweetsshopproject.netlify.app"],
+                   "https://sweet-shop-management-system-5pvzbll8q-suman2k3s-projects.vercel.app"],
         # frontend URL
    
 
