@@ -16,20 +16,20 @@ html, body {
 .login-container {
   min-height: 100vh;
   display: flex;
-  justify-content: flex-start;   /* card left */
+  justify-content: flex-start;   /* 👈 move card left on desktop */
   align-items: center;
 
   background:
     linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.35)),
     url("/image.png");
 
-  /* 👇 KEY FIX */
-  background-size: 100% auto;
-  background-position: center center;
+  background-size: cover;        /* 👈 fixes overflow */
+  background-position: center;   /* 👈 keeps image centered */
   background-repeat: no-repeat;
 
-  padding: 16px;
+  padding: 24px;
 }
+
 
 
 
