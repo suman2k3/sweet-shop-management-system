@@ -8,6 +8,12 @@ from pydantic import BaseModel
 
 from database import SessionLocal
 from models import User
+from pydantic import BaseModel
+
+class AuthRequest(BaseModel):
+    username: str
+    password: str
+
 
 router = APIRouter()
 
@@ -53,27 +59,31 @@ class LoginRequest(BaseModel):
 
 # ---------------- Auth Routes ----------------
 @router.post("/register")
-def register(data: RegisterRequest, db: Session = Depends(get_db)):
-    if db.query(User).filter(User.username == data.username).first():
+def register(data: AuthRequest, db: Session = Depends(get_db)):
+    existing_user = db.query(User).filter(User.username == data.username).first()
+    if existing_user:
         raise HTTPException(status_code=400, detail="User already exists")
 
-    user = User(
+    new_user = User(
         username=data.username,
         hashed_password=hash_password(data.password)
     )
-    db.add(user)
+    db.add(new_user)
     db.commit()
+
     return {"message": "User registered successfully"}
 
+
 @router.post("/login")
-def login(data: LoginRequest, db: Session = Depends(get_db)):
+def login(data: AuthRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.username == data.username).first()
 
     if not user or not verify_password(data.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     token = create_token(user)
-    return {"access_token": token, "token_type": "bearer"}
+    return {"access_token": token}
+
 
 # ---------------- Current User ----------------
 def get_current_user(
