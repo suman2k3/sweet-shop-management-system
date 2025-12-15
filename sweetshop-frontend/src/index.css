@@ -540,5 +540,18 @@ html, body {
     grid-column: span 1;
   }
 }
+@media (max-width: 768px) {
+  .login-container {
+    justify-content: center;      /* center horizontally */
+    align-items: flex-end;        /* card at bottom */
+    padding-bottom: 40px;
+  }
+
+  .login-card {
+    width: 100%;
+    max-width: 340px;
+  }
+}
+
 
 
